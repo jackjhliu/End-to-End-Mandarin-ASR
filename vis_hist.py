@@ -14,7 +14,7 @@ def main():
     lines = list(csv.reader(open(args.history)))
     lines = sorted(lines, key=lambda l:int(l[1]))
     # format: datetime, epoch, LR, train_loss, dev_loss, CER
-    _, epochs, LRs, train_losses, dev_losses, PERs = zip(*lines)
+    _, epochs, LRs, train_losses, dev_losses, CERs = zip(*lines)
 
     plt.figure(figsize=(15,3))
     plt.subplots_adjust(.05, 0.15, .95, .9, None, None)
@@ -29,7 +29,7 @@ def main():
     plt.subplot(1,3,2)
     plt.title("Dev CER")
     plt.grid()
-    plt.plot(np.int64(epochs), np.float32(PERs))
+    plt.plot(np.int64(epochs), np.float32(CERs))
     plt.ylim(0,1)
     plt.xlabel('epochs')
 
