@@ -1,4 +1,4 @@
-""" Compute phoneme error rate (PER).
+""" Compute character error rate (CER).
 """
 import torch
 import os
@@ -7,11 +7,11 @@ import eval_utils
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compute phoneme error rate (PER).")
+    parser = argparse.ArgumentParser(description="Compute character error rate (CER).")
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--root', default="data/lisa/data/timit/raw/TIMIT", type=str, help="Directory of dataset.")
+    parser.add_argument('--root', default="./data_aishell", type=str, help="Directory of dataset.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -21,14 +21,14 @@ def main():
 
     # Restore checkpoint
     info = torch.load(args.ckpt)
-    print ("Dev PER of checkpoint: %.4f @epoch: %d" % (info['dev_per'], info['epoch']))
+    print ("Dev CER of checkpoint: %.4f @epoch: %d" % (info['dev_cer'], info['epoch']))
 
     cfg = info['cfg']
 
     # Create dataset
-    loader, tokenizer = data.prepareData(root=args.root,
-                                         split=args.split,
-                                         batch_size=cfg['train']['batch_size'])
+    loader, tokenizer = data.load(root=args.root,
+                                  split=args.split,
+                                  batch_size=cfg['train']['batch_size'])
 
     # Build model
     model = build_model.Seq2Seq(len(tokenizer.vocab),
@@ -40,8 +40,8 @@ def main():
     model = model.cuda()
 
     # Evaluate
-    per = eval_utils.get_per(loader, model, tokenizer.vocab)
-    print ("PER on %s set = %.4f" % (args.split, per))
+    cer = eval_utils.get_cer(loader, model, tokenizer.vocab)
+    print ("CER on %s set = %.4f" % (args.split, cer))
 
 
 if __name__ == '__main__':

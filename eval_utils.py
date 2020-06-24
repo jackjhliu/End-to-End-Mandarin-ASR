@@ -44,8 +44,9 @@ def get_cer(dataloader, model, vocab):
                 gt = decode(ys[j], vocab)
                 total_error += editdistance.eval(gt, preds)
                 n_tokens += len(gt)
-            print ("Calculating CER ... (#batch: %d/%d)" % (i+1, len(dataloader)), end='\r')
+            cer = total_error / n_tokens
+            print ("Calculating CER ... (=%.4f, #batch: %d/%d)" % (cer, i+1, len(dataloader)), end='\r')
     print ()
-    cer = total_error / n_tokens
+    
     return cer
 

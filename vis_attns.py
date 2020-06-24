@@ -49,7 +49,7 @@ def main():
 
     # Restore checkpoint
     info = torch.load(args.ckpt)
-    print ("Dev PER of checkpoint: %.4f @epoch: %d" % (info['dev_per'], info['epoch']))
+    print ("Dev CER of checkpoint: %.4f @epoch: %d" % (info['dev_cer'], info['epoch']))
 
     cfg = info['cfg']
 
