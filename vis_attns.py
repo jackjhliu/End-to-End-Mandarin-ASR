@@ -39,7 +39,7 @@ def main():
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--root', default="data/lisa/data/timit/raw/TIMIT", type=str, help="Directory of dataset.")
+    parser.add_argument('--root', default="./data_aishell", type=str, help="Directory of dataset.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
