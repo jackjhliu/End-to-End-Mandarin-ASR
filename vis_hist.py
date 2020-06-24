@@ -13,7 +13,7 @@ def main():
 
     lines = list(csv.reader(open(args.history)))
     lines = sorted(lines, key=lambda l:int(l[1]))
-    # format: datetime, epoch, LR, train_loss, dev_loss, PER
+    # format: datetime, epoch, LR, train_loss, dev_loss, CER
     _, epochs, LRs, train_losses, dev_losses, PERs = zip(*lines)
 
     plt.figure(figsize=(15,3))
@@ -27,7 +27,7 @@ def main():
     plt.legend()
 
     plt.subplot(1,3,2)
-    plt.title("Dev PER")
+    plt.title("Dev CER")
     plt.grid()
     plt.plot(np.int64(epochs), np.float32(PERs))
     plt.ylim(0,1)
