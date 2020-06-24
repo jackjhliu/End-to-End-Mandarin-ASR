@@ -1,0 +1,24 @@
+# The location to save checkpoints. If null, it will be the same location and have the same name as this config file.
+logdir: null
+
+model:
+# hidden_size: Number of hidden units in GRU cells.
+# drop_p: Dropout rate.
+# encoder_layers: EncoderRNN layers.
+# decoder_layers: DecoderRNN layers.
+    hidden_size: 256
+    drop_p: 0.
+    encoder_layers: 3
+    decoder_layers: 2
+
+train:
+# batch_size: Batch size.
+# init_lr: Initial learning rate.
+# decay_factor: Learning rate decay factor.
+# patience: Number of epochs with no improvement after which learning rate will be reduced.
+# epochs: Total number of epochs to train.
+    batch_size: 64
+    init_lr: 0.0003
+    decay_factor : 0.5
+    patience: 10
+    epochs: 200

@@ -1,2 +1,6 @@
 # End-to-End-Mandarin-ASR
-End-to-end speech recognition on AISHELL dataset.
+
+中文語音辨識
+
+End-to-end speech recognition on AISHELL dataset using Pytorch.
+
