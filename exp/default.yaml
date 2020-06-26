@@ -7,7 +7,7 @@ model:
 # encoder_layers: EncoderRNN layers.
 # decoder_layers: DecoderRNN layers.
     hidden_size: 256
-    drop_p: 0.
+    drop_p: 0.3
     encoder_layers: 3
     decoder_layers: 2
 
