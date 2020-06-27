@@ -1,4 +1,4 @@
-""" Extract FBANK features from audio signal and compute necessary statistics for training. 
+""" Extract FBANK features from audio signals and compute necessary information for training. 
 """
 import torch
 import torchaudio
@@ -6,7 +6,9 @@ import os
 import argparse
 import glob
 import data_utils
+import pickle
 from tqdm import tqdm
+from torchnlp.encoders.text import StaticTokenizerEncoder
 
 
 def compute_fbanks(root, split):
@@ -15,9 +17,10 @@ def compute_fbanks(root, split):
         root (string): The root directory of AISHELL dataset.
         split (string): Which of the subset of data to take. One of 'train', 'dev' or 'test'.
     """
-    data_valid = data_utils.parse_partition(root, split)
     audio_files = glob.glob(os.path.join(root, "wav/%s/*/*.wav" % split))
-    audio_files = [p for p in audio_files if data_utils.get_id(p) in data_valid]
+    # Ignore audios without transcript.
+    transcripts = data_utils.read_transcripts(root)
+    audio_files = [a for a in audio_files if data_utils.get_id(a) in transcripts]
 
     for f in tqdm(audio_files):
         id = data_utils.get_id(f)
@@ -28,16 +31,16 @@ def compute_fbanks(root, split):
             torch.save(x, out_fname)
 
 
-def compute_statistics(root, fbanks_train):
+def compute_statistics(root):
     """
-    Compute the sequence lengths, mean, and standard deviation over the training set. During training the data
-    generator will pool together examples with similar FBANK feature size, so we needs to calculate the sizes
-    in advance.
+    Calculate the sequence lengths, mean, and standard deviation over the training set. During training
+    the data generator will pool together examples with similar FBANK feature size, so we needs to
+    calculate the sizes in advance.
 
     Args:
         root (string): The root directory of AISHELL dataset.
-        fbanks_train (list(string)): All of the FBANK feature file paths of training set.
     """
+    fbanks_train = glob.glob(os.path.join(root, "fbank/train/*.pth"))
     xlens = {}
     # mean
     accumulate = 0
@@ -64,8 +67,27 @@ def compute_statistics(root, fbanks_train):
     torch.save(statistics, os.path.join(root, 'statistics.pth'))
 
 
+def make_tokenizer(root):
+    """
+    Construct Pytorch-NLP sentence tokenizer for labellings.
+
+    Args:
+        root (string): The root directory of AISHELL dataset.
+    """
+    transcripts = data_utils.read_transcripts(root)
+    fbanks_train = glob.glob(os.path.join(root, "fbank/train/*.pth"))
+    labellings = [transcripts[data_utils.get_id(p)] for p in fbanks_train]
+    tokenizer = StaticTokenizerEncoder(labellings,
+                                       tokenize=data_utils.tokenize_fn,
+                                       min_occurrences=5,
+                                       append_eos=True,
+                                       reserved_tokens=['<pad>', '<unk>', '</s>'])
+    torch.save(tokenizer, os.path.join(root, 'tokenizer.pth'))
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Train the model.")
+    parser = argparse.ArgumentParser(
+        description="Extract FBANK features from audio signals and compute necessary information for training.")
     parser.add_argument('root', type=str, help="The root directory of AISHELL dataset.")
     args = parser.parse_args()
 
@@ -83,8 +105,11 @@ def main():
 
     print ("Computing statistics ...")
     if not os.path.exists(os.path.join(args.root, 'statistics.pth')):
-        fbanks_train = glob.glob(os.path.join(args.root, "fbank/train/*.pth"))
-        compute_statistics(args.root, fbanks_train)
+        compute_statistics(args.root)
+
+    print ("Make tokenizer ...")
+    if not os.path.exists(os.path.join(args.root, 'tokenizer.pth')):
+        make_tokenizer(args.root)
 
     print ("Completed !")
 

@@ -11,7 +11,6 @@ import data_utils
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 from torchnlp.samplers import BucketBatchSampler
-from torchnlp.encoders.text import StaticTokenizerEncoder
 
 
 class AISHELL(Dataset):
@@ -55,7 +54,7 @@ class AISHELL(Dataset):
         """
         xs, ys = zip(*batch)
 
-        # normalization
+        # Normalization
         xs = [(x - mean) / std for x in xs]
 
         # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/pdf/1712.01769.pdf.
@@ -73,10 +72,9 @@ class AISHELL(Dataset):
 def load(root, split, batch_size, workers=0):
     """
     The full process to load the data:
-        1. Load the required statistical information to perform normalization and training.
-        2. Create pairs of [fbank_file, labellings] examples.
-        3. Build vocabulary.
-        4. Create Pytorch Dataset and DataLoader.
+        1. Create pairs of [fbank_file, labellings] examples.
+        2. Load the required statistical information and tokenizer.
+        3. Create Pytorch Dataset and DataLoader.
 
     Args:
         root (string): The root directory of AISHELL dataset.
@@ -91,35 +89,29 @@ def load(root, split, batch_size, workers=0):
     assert split in ['train', 'dev', 'test']
     print ("Reading %s data ..." % split)
 
-    data_train = data_utils.parse_partition(root, 'train')
-
-    # Load statistics
-    statistics = torch.load(os.path.join(root, 'statistics.pth'))
-    mean = statistics['mean']
-    std = statistics['std']
-    xlens_train = statistics['xlens']                      # Representing {audio id: sequence length}.
-    xlens_train = [xlens_train[id] for id in data_train]   # Representing [sequence length].
-
     # Create pairs of [fbank_file, labellings] examples.
-    data_train = [[os.path.join(root, 'fbank', 'train/%s.pth'%id), data_train[id]] for id in data_train]
-    assert len(xlens_train) == len(data_train)
+    transcripts = data_utils.read_transcripts(root)
+    fbanks_train = glob.glob(os.path.join(root, "fbank/train/*.pth"))
+    data_train = [[p, transcripts[data_utils.get_id(p)]] for p in fbanks_train]
 
     if split == 'train':
         data = data_train
     else:
-        data = data_utils.parse_partition(root, split)
-        data = [[os.path.join(root, 'fbank', '%s/%s.pth'%(split, id)), data[id]] for id in data]
+        fbanks = glob.glob(os.path.join(root, "fbank/%s/*.pth" % split))
+        data = [[p, transcripts[data_utils.get_id(p)]] for p in fbanks]
 
-    # Build vocabulary.
-    tokenizer = StaticTokenizerEncoder([p[1] for p in data_train],
-                                       tokenize=lambda s: ['<s>'] + list(s),
-                                       min_occurrences=5,
-                                       append_eos=True,
-                                       reserved_tokens=['<pad>', '<unk>', '</s>'])
+    # Load statistics and tokenizer
+    statistics = torch.load(os.path.join(root, 'statistics.pth'))
+    mean = statistics['mean']
+    std = statistics['std']
+    xlens_train = statistics['xlens']   # {audio id: sequence length}.
+    xlens_train = [xlens_train[data_utils.get_id(p[0])] for p in data_train]
+    assert len(xlens_train) == len(data_train)
+    tokenizer = torch.load(os.path.join(root, 'tokenizer.pth'))
 
     # Build Pytorch DataLoaders
     dataset = AISHELL(data)
-    print ("Dataset size:", len(dataset))
+    print ("Dataset size:", len(dataset))   # Expect: 120098/14326/7176
     
     if split == 'train':
         sampler = torch.utils.data.sampler.RandomSampler(dataset)
@@ -149,7 +141,7 @@ def inspect_data():
     import matplotlib.pyplot as plt
 
     BATCH_SIZE = 64
-    SPLIT = 'dev'
+    SPLIT = 'train'
     ROOT = "/data/Data2/Public-Folders/aishell/data_aishell"
 
     loader, tokenizer = load(ROOT, SPLIT, BATCH_SIZE)
@@ -163,8 +155,6 @@ def inspect_data():
         print (tokenizer.decode(ys[i]))
         plt.figure()
         plt.imshow(xs[i].T)
-        plt.clim(-3, 12)
-        plt.colorbar()
         plt.show()
 
 

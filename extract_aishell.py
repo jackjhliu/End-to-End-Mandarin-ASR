@@ -1,7 +1,10 @@
+""" Extract data_aishell.tgz.
+"""
 import os
 import tarfile
 import glob
 import argparse
+
 
 def extracttar(filename, outpath="./"):
     with tarfile.open(filename) as f:
