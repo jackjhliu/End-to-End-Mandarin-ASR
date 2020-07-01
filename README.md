@@ -52,7 +52,7 @@ You should specify your training logs accordingly.
 ```bash
 $ python vis_hist.py exp/default/history.txt
 ```
-![](./img/Figure_3.png)
+![](./img/Figure_1.png)
 
 ### Test
 During training, the program will keep monitoring the error rate on development set.
