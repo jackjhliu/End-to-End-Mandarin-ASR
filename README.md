@@ -66,6 +66,11 @@ $ python eval.py exp/default/best.pth
 Or you can test random audio from the test set and see the attentions:
 ```bash
 $ python vis_attns.py exp/default/best.pth
+
+Predict:
+江 苏 快 递 实 名 制 登 记 动 争 革
+Ground-truth:
+江 苏 快 递 实 名 制 登 记 动 真 格
 ```
 ![](./img/Figure_2.png)
 

@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import argparse
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+plt.rcParams['ytick.labelsize'] = 10
+plt.rcParams['xtick.labelsize'] = 10
 
 
 def showAttention(output_words, attentions):
@@ -13,7 +16,6 @@ def showAttention(output_words, attentions):
     fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions, cmap='bone')
-    fig.colorbar(cax)
 
     ax.set_yticklabels([''] + output_words)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -54,7 +56,7 @@ def main():
     cfg = info['cfg']
 
     # Create dataset
-    loader, tokenizer = data.prepareData(root=args.root, split=args.split, batch_size=1)
+    loader, tokenizer = data.load(root=args.root, split=args.split, batch_size=1)
 
     # Build model
     model = build_model.Seq2Seq(len(tokenizer.vocab),
