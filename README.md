@@ -72,7 +72,7 @@ Predict:
 Ground-truth:
 江 苏 快 递 实 名 制 登 记 动 真 格
 ```
-![](./img/Figure_2.png)
+![](./img/Figure_2-2.png)
 
 
 ## References
