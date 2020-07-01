@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import argparse
+import eval_utils
 plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
 plt.rcParams['ytick.labelsize'] = 10
 plt.rcParams['xtick.labelsize'] = 10
@@ -21,19 +22,6 @@ def showAttention(output_words, attentions):
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
     plt.show()
-
-
-def decode(s, vocab):
-    s_out = []
-    for i in s:
-        w = vocab[i]
-        if w == '<s>':
-            continue
-        elif w == '</s>':
-            s_out.append(w)
-            break
-        s_out.append(w)
-    return s_out
 
 
 def main():
@@ -72,12 +60,12 @@ def main():
         for (x, xlens, y) in loader:
             predictions, attentions = model(x.cuda(), xlens)
             predictions, attentions = predictions[0], attentions[0]
-            predictions = decode(predictions, tokenizer.vocab)
+            predictions = eval_utils.decode(predictions, tokenizer.vocab)
             attentions = attentions[:len(predictions)].cpu().numpy()   # (target_length, source_length)
             print ("Predict:")
-            print (' '.join(predictions[:-1]))
+            print (' '.join(predictions))
             print ("Ground-truth:")
-            print (tokenizer.decode(y[0,1:-1]))
+            print (tokenizer.decode(y[0,1:-1]))   # Exclude <s> and </s>
             print ()
             showAttention(predictions, attentions)
 

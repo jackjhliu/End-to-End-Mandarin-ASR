@@ -52,7 +52,7 @@ You should specify your training logs accordingly.
 ```bash
 $ python vis_hist.py exp/default/history.txt
 ```
-![](./img/Figure_1.png)
+![](./img/Figure_3.png)
 
 ### Test
 During training, the program will keep monitoring the error rate on development set.
@@ -68,11 +68,11 @@ Or you can test random audio from the test set and see the attentions:
 $ python vis_attns.py exp/default/best.pth
 
 Predict:
-江 苏 快 递 实 名 制 登 记 动 争 革
+北 国 将 不 再 生 产 大 压 无 人 机
 Ground-truth:
-江 苏 快 递 实 名 制 登 记 动 真 格
+美 国 将 不 再 生 产 大 鸦 无 人 机
 ```
-![](./img/Figure_2-2.png)
+![](./img/Figure_3.png)
 
 
 ## References
