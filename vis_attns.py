@@ -1,4 +1,4 @@
-""" Inference on random input sentence and visualize the attention matrix.
+""" Inference on random audio from dataset and visualize the attention matrix.
 """
 import torch
 import os
@@ -25,7 +25,7 @@ def showAttention(output_words, attentions):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inference on arbitrary input sentence and visualize the attention matrix.")
+    parser = argparse.ArgumentParser(description="Inference on random audio from dataset and visualize the attention matrix.")
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")

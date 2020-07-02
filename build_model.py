@@ -267,24 +267,5 @@ class Seq2Seq(nn.Module):
             return loss
 
 
-def test():
-    """
-    Test the functionality of models.
-    """
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-    import data
-
-    ROOT = "/data/Data2/Public-Folders/data/lisa/data/timit/raw/TIMIT"
-    loader, tokenizer = data.prepareData(ROOT, 'train', 64)
-    xs, xlens, ys = next(iter(loader))
-
-    model = Seq2Seq(len(tokenizer.vocab),
-                    hidden_size=256,
-                    encoder_layers=3,
-                    decoder_layers=3).cuda()
-    loss = model(xs.cuda(), xlens, ys.cuda())
-
-
 if __name__ == '__main__':
     test()
