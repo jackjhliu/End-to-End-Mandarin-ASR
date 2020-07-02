@@ -74,6 +74,12 @@ Ground-truth:
 ```
 ![](./img/Figure_3.png)
 
+## TODO
+- [ ] Beam Search
+- [ ] Restore checkpoint and resume previous training
+- [ ] LM Rescoring
+- [ ] Label Smoothing
+- [ ] Polyak Averaging
 
 ## References
 [1] W. Chan _et al._, "Listen, Attend and Spell",
