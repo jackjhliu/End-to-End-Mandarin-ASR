@@ -88,7 +88,7 @@ def main():
     model = model.cuda()
 
     # Training criteria
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['train']['init_lr'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['train']['init_lr'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',
                                                            factor=cfg['train']['decay_factor'],
