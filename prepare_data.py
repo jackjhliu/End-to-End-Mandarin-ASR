@@ -21,7 +21,7 @@ def read_transcripts(root):
     transcripts = {}
     for l in lines:
         l = l.split()
-        transcripts[l[0]] = ''.join(l[1:])
+        transcripts[l[0]] = ' '.join(l[1:])
     return transcripts
 
 

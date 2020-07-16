@@ -14,7 +14,7 @@ def encode_fn(s_in):
     Returns:
         s_out (list(string)): Words.
     """
-    s_out = list(s_in)
+    s_out = s_in.split()
     return s_out
 
 
