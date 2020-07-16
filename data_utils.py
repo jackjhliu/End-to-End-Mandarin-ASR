@@ -4,29 +4,36 @@ import os
 import glob
 
 
-def tokenize_fn(s_in):
-    s_out = ['<s>'] + list(s_in)
+def encode_fn(s_in):
+    """
+    A function for Pytorch-NLP tokenizer to encode sequences.
+
+    Args:
+        s_in (string): Sentence.
+
+    Returns:
+        s_out (list(string)): Words.
+    """
+    s_out = list(s_in)
     return s_out
 
 
-def get_id(audio_file):
+def decode_fn(s_in):
     """
-    Given an audio/fbank file path, return its ID.
-    """
-    return os.path.basename(audio_file)[:-4]
+    A function for Pytorch-NLP tokenizer to decode sequences.
 
+    Args:
+        s_in (list(string)): Words.
 
-def read_transcripts(root):
-    """
     Returns:
-        transcripts (dict): All the transcripts for AISHELL dataset. They are represented
-                            by {audio id: transcript}.
+        s_out (string): Sentence.
     """
-    with open(os.path.join(root, "transcript/aishell_transcript_v0.8.txt")) as f:
-        lines = f.readlines()
-    lines = [l.strip() for l in lines]
-    transcripts = {}
-    for l in lines:
-        l = l.split()
-        transcripts[l[0]] = ''.join(l[1:])
-    return transcripts
+    s_out = []
+    for w in s_in:
+        if w == '<s>':
+            continue
+        elif w=='</s>':
+            break
+        s_out.append(w)
+    s_out = ' '.join(s_out)
+    return s_out

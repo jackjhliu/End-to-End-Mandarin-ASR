@@ -265,7 +265,3 @@ class Seq2Seq(nn.Module):
         else:
             loss = self.decoder(self.encoder(xs, xlens), ys)
             return loss
-
-
-if __name__ == '__main__':
-    test()

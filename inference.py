@@ -1,4 +1,4 @@
-""" Inference on random audio from dataset and visualize the attention matrix.
+""" Test on random audio from dataset and visualize the attention matrix.
 """
 import torch
 import os
@@ -6,30 +6,26 @@ import numpy as np
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import argparse
-import eval_utils
-plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
-plt.rcParams['ytick.labelsize'] = 10
-plt.rcParams['xtick.labelsize'] = 10
 
 
-def showAttention(output_words, attentions):
+def showAttention(predictions, attentions):
+    output_words = predictions.split()
     # Set up figure with colorbar
     fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions, cmap='bone')
+    fig.colorbar(cax)
 
     ax.set_yticklabels([''] + output_words)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
-
     plt.show()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inference on random audio from dataset and visualize the attention matrix.")
+    parser = argparse.ArgumentParser(description="Test on random audio from dataset and visualize the attention matrix.")
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--root', default="./data_aishell", type=str, help="Directory of dataset.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -44,9 +40,10 @@ def main():
     cfg = info['cfg']
 
     # Create dataset
-    loader, tokenizer = data.load(root=args.root, split=args.split, batch_size=1)
+    loader = data.load(split=args.split, batch_size=1)
 
     # Build model
+    tokenizer = torch.load('tokenizer.pth')
     model = build_model.Seq2Seq(len(tokenizer.vocab),
                                 hidden_size=cfg['model']['hidden_size'],
                                 encoder_layers=cfg['model']['encoder_layers'],
@@ -60,12 +57,13 @@ def main():
         for (x, xlens, y) in loader:
             predictions, attentions = model(x.cuda(), xlens)
             predictions, attentions = predictions[0], attentions[0]
-            predictions = eval_utils.decode(predictions, tokenizer.vocab)
-            attentions = attentions[:len(predictions)].cpu().numpy()   # (target_length, source_length)
+            predictions = tokenizer.decode(predictions)
+            attentions = attentions[:len(predictions.split())].cpu().numpy()   # (target_length, source_length)
+            ground_truth = tokenizer.decode(y[0])
             print ("Predict:")
-            print (' '.join(predictions))
+            print (predictions)
             print ("Ground-truth:")
-            print (tokenizer.decode(y[0,1:-1]))   # Exclude <s> and </s>
+            print (ground_truth)
             print ()
             showAttention(predictions, attentions)
 

@@ -25,9 +25,14 @@ def log_history(save_path, message):
         save_path (string): The location to log the history.
         message (string): The message to log.
     """
-    f = open(os.path.join(save_path ,'history.txt'), 'a')
-    f.write("%s\n" % message)
-    f.close()
+    fname = os.path.join(save_path,'history.csv')
+    if not os.path.exists(fname):
+        with open(fname, 'w') as f:
+            f.write("datetime,epoch,learning rate,train loss,dev loss,CER\n")
+            f.write("%s\n" % message)
+    else:
+        with open(fname, 'a') as f:
+            f.write("%s\n" % message)
 
 
 def save_checkpoint(filename, save_path, epoch, dev_cer, cfg, weights):
@@ -52,7 +57,6 @@ def main():
     parser = argparse.ArgumentParser(description="Train the model.")
     parser.add_argument('cfg', type=str, help="Specify which experiment config file to use.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--root', default="./data_aishell", type=str, help="Directory of dataset.")
     parser.add_argument('--workers', default=0, type=int, help="How many subprocesses to use for data loading.")
     parser.add_argument('--ckpt_freq', default=10, type=int, help="Frequency (number of epochs) to save checkpoints.")
     args = parser.parse_args()
@@ -71,15 +75,11 @@ def main():
         os.mkdir(save_path)
 
     # Create dataset
-    train_loader, tokenizer = data.load(root=args.root,
-                                        split='train',
-                                        batch_size=cfg['train']['batch_size'],
-                                        workers=args.workers)
-    dev_loader, _ = data.load(root=args.root,
-                              split='dev',
-                              batch_size=cfg['train']['batch_size'])
+    train_loader = data.load(split='train', batch_size=cfg['train']['batch_size'], workers=args.workers)
+    dev_loader = data.load(split='dev', batch_size=cfg['train']['batch_size'])
 
     # Build model
+    tokenizer = torch.load('tokenizer.pth')
     model = build_model.Seq2Seq(len(tokenizer.vocab),
                                 hidden_size=cfg['model']['hidden_size'],
                                 encoder_layers=cfg['model']['encoder_layers'],
@@ -133,7 +133,7 @@ def main():
                 n_tokens += (ys[:,1:] > 0).long().sum()
         dev_loss = dev_loss / n_tokens
         # Compute dev CER
-        cer = eval_utils.get_cer(dev_loader, model, tokenizer.vocab)
+        cer = eval_utils.get_cer(dev_loader, model)
         print ("Dev loss: %.3f," % dev_loss, end=' ')
         print ("dev CER: %.4f" % cer)
         if cer < best_cer:
@@ -151,7 +151,7 @@ def main():
 
         # Logging
         datetime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        msg = "%s, %d, %f, %.3f, %.3f, %.4f" % (datetime, epoch, lr, train_loss, dev_loss, cer)
+        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, cer)
         log_history(save_path, msg)
 
 

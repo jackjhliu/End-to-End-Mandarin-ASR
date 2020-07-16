@@ -11,7 +11,6 @@ def main():
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--root', default="./data_aishell", type=str, help="Directory of dataset.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -26,11 +25,10 @@ def main():
     cfg = info['cfg']
 
     # Create dataset
-    loader, tokenizer = data.load(root=args.root,
-                                  split=args.split,
-                                  batch_size=cfg['train']['batch_size'])
+    loader = data.load(split=args.split, batch_size=cfg['train']['batch_size'])
 
     # Build model
+    tokenizer = torch.load('tokenizer.pth')
     model = build_model.Seq2Seq(len(tokenizer.vocab),
                                 hidden_size=cfg['model']['hidden_size'],
                                 encoder_layers=cfg['model']['encoder_layers'],
@@ -40,7 +38,7 @@ def main():
     model = model.cuda()
 
     # Evaluate
-    cer = eval_utils.get_cer(loader, model, tokenizer.vocab)
+    cer = eval_utils.get_cer(loader, model)
     print ("CER on %s set = %.4f" % (args.split, cer))
 
 

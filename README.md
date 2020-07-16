@@ -10,26 +10,21 @@ The acoustic features are 80-dimensional filter banks. They are stacked every 3 
 
 With this code you can achieve **~13% CER** on the test set.
 
-## Requirements
-* Python 3.6
-* Pytorch 1.5
-* torchaudio 0.5.0
-* [PyTorch-NLP](https://github.com/PetrochukM/PyTorch-NLP) 0.5.0
-* PyYAML
-* editdistance
-* matplotlib
-* tqdm
-
 ## Usage
+### Install requirements
+```bash
+$ pip install -r requirements.txt
+```
+
 ### Data
 1. Download AISHELL dataset (data_aishell.tgz) from http://www.openslr.org/33/.
 2. Extract data_aishell.tgz:
 ```bash
 $ python extract_aishell.py ${PATH_TO_data_aishell.tgz}
 ```
-3. Extract filter bank features and prepare for data normalization:
+3. Create lists (*.csv) of audio file paths along with their transcripts:
 ```bash
-$ python prepare_data.py ${PATH_TO_AISHELL}
+$ python prepare_data.py ${DIRECTORY_OF_AISHELL}
 ```
 
 ### Train
@@ -47,10 +42,10 @@ $ python train.py ${PATH_TO_YOUR_CONFIG}
 ```
 
 ### Show loss curve
-With the default configuration, the training logs are stored in `exp/default/history.txt`.
+With the default configuration, the training logs are stored in `exp/default/history.csv`.
 You should specify your training logs accordingly.
 ```bash
-$ python vis_hist.py exp/default/history.txt
+$ python show_history.py exp/default/history.csv
 ```
 ![](./img/Figure_1.png)
 
@@ -65,7 +60,7 @@ $ python eval.py exp/default/best.pth
 
 Or you can test random audio from the test set and see the attentions:
 ```bash
-$ python vis_attns.py exp/default/best.pth
+$ python inference.py exp/default/best.pth
 
 Predict:
 北 国 将 不 再 生 产 大 压 无 人 机
