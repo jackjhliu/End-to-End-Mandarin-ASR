@@ -24,7 +24,7 @@ class ASR(Dataset):
         """
         Returns:
             x (torch.FloatTensor, [seq_length, dim_features]): The FBANK features.
-            y (torch.LongTensor, [n_tokens]): The phoneme sequence.
+            y (torch.LongTensor, [n_tokens]): The label sequence.
         """
         x, y = self.df.iloc[idx]
         x, _ = torchaudio.load(x)
@@ -41,12 +41,12 @@ class ASR(Dataset):
         Generate a mini-batch of data. For DataLoader's 'collate_fn'.
 
         Args:
-            batch (list(tuple)): A mini-batch of (FBANK features, phoneme sequences) pairs.
+            batch (list(tuple)): A mini-batch of (FBANK features, label sequences) pairs.
 
         Returns:
             xs (torch.FloatTensor, [batch_size, (padded) seq_length, dim_features]): A mini-batch of FBANK features.
             xlens (torch.LongTensor, [batch_size]): Sequence lengths before padding.
-            ys (torch.LongTensor, [batch_size, (padded) n_tokens]): A mini-batch of phoneme sequences.
+            ys (torch.LongTensor, [batch_size, (padded) n_tokens]): A mini-batch of label sequences.
         """
         xs, ys = zip(*batch)
         xlens = torch.tensor([x.shape[0] for x in xs])
@@ -63,7 +63,7 @@ def load(split, batch_size, workers=0):
         workers (integer): How many subprocesses to use for data loading.
 
     Returns:
-        loader (DataLoader): A DataLoader can generate batches of (FBANK features, FBANK lengths, phoneme sequence).
+        loader (DataLoader): A DataLoader can generate batches of (FBANK features, FBANK lengths, label sequence).
     """
     assert split in ['train', 'dev', 'test']
 

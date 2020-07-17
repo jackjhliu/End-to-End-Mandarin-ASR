@@ -4,11 +4,12 @@ import torch
 import editdistance
 
 
-def get_cer(dataloader, model):
+def get_error(dataloader, model):
     """
-    Calculate character error rate (CER) on a specific dataset.
+    Calculate error rate on a specific dataset.
     """
     tokenizer = torch.load('tokenizer.pth')
+    table = get_phn_mapping_table()
     n_tokens = 0
     total_error = 0
     with torch.no_grad():
@@ -21,7 +22,7 @@ def get_cer(dataloader, model):
                 gt = gt.split()
                 total_error += editdistance.eval(gt, preds)
                 n_tokens += len(gt)
-            print ("Calculating CER ... (#batch: %d/%d)" % (i+1, len(dataloader)), end='\r')
+            print ("Calculating error rate ... (#batch: %d/%d)" % (i+1, len(dataloader)), end='\r')
     print ()
-    cer = total_error / n_tokens
-    return cer
+    error = total_error / n_tokens
+    return error

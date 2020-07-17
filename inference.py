@@ -35,7 +35,7 @@ def main():
 
     # Restore checkpoint
     info = torch.load(args.ckpt)
-    print ("Dev CER of checkpoint: %.4f @epoch: %d" % (info['dev_cer'], info['epoch']))
+    print ("Dev. error rate of checkpoint: %.4f @epoch: %d" % (info['dev_error'], info['epoch']))
 
     cfg = info['cfg']
 

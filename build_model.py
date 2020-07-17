@@ -116,8 +116,10 @@ class DecoderRNN(nn.Module):
                                       hidden_size,
                                       num_layers=num_layers,
                                       drop_p=drop_p)
-        # The initial state is a trainable vector.
-        self.init_state = torch.nn.Parameter(torch.randn([num_layers, 1, hidden_size]))
+        # The initial states are trainable vectors.
+        self.init_h = torch.nn.Parameter(torch.randn([num_layers, 1, hidden_size]))
+        self.init_y = torch.nn.Parameter(torch.randn([1, hidden_size]))
+
         self.attn_W = nn.Linear(2 * hidden_size, hidden_size)
         self.attn_U = nn.Linear(hidden_size, hidden_size)
         self.attn_v = nn.Linear(hidden_size, 1)
@@ -144,55 +146,49 @@ class DecoderRNN(nn.Module):
         states, states_lengths  = rnn_utils.pad_packed_sequence(
             encoder_states, batch_first=True)   # [batch_size, padded_len_src, 2 * hidden_size], [batch_size]
         batch_size = states.shape[0]
-        initial_state = self.init_state.repeat([1, batch_size, 1])   # [num_layers, batch_size, hidden_size]
+        h = self.init_h.repeat([1, batch_size, 1])   # [num_layers, batch_size, hidden_size]
+        y = self.init_y.repeat([batch_size, 1])      # [batch_size, hidden_size]
 
         if ground_truths is None:
             all_attn_weights = []
             predictions = [torch.full([batch_size], 3, dtype=torch.int64).cuda()]   # The first predicted word is always <s> (ID=3).
             # Unrolling the forward pass
-            for time_step in range(-1, 100):   # Empirically set max_length=100
-                if time_step == -1:
-                    h = initial_state
-                else:
-                    x = predictions[-1]                           # [batch_size]
-                    x = self.embed(x)                             # [batch_size, hidden_size]
-                    h = self.cell(torch.cat([y, x], dim=-1), h)   # [num_layers, batch_size, hidden_size]
+            for time_step in range(100):   # Empirically set max_length=100
+                x = predictions[-1]                           # [batch_size]
+                x = self.embed(x)                             # [batch_size, hidden_size]
+                h = self.cell(torch.cat([y, x], dim=-1), h)   # [num_layers, batch_size, hidden_size]
                 attns, attn_weights = self.apply_attn(
-                    states, states_lengths, h[-1])                # [batch_size, 2 * hidden_size], [batch_size, length_of_encoder_states]
-                y = torch.cat([attns, h[-1]], dim=-1)             # [batch_size, 3 * hidden_size]
-                y = F.relu(self.fc(y))                            # [batch_size, hidden_size]
-                if time_step > -1:
-                    all_attn_weights.append(attn_weights)
-                    # Output
-                    logits = self.classifier(y)                   # [batch_size, n_words]
-                    # TODO: Adopt Beam Search to replace Greedy Search
-                    samples = torch.argmax(logits, dim=-1)        # [batch_size]
-                    predictions.append(samples)
-            predictions = torch.stack(predictions, dim=-1)        # [batch_size, max_length]
+                    states, states_lengths, h[-1])            # [batch_size, 2 * hidden_size], [batch_size, length_of_encoder_states]
+                y = torch.cat([attns, h[-1]], dim=-1)         # [batch_size, 3 * hidden_size]
+                y = F.relu(self.fc(y))                        # [batch_size, hidden_size]
+
+                all_attn_weights.append(attn_weights)
+                # Output
+                logits = self.classifier(y)                   # [batch_size, n_words]
+                # TODO: Adopt Beam Search to replace Greedy Search
+                samples = torch.argmax(logits, dim=-1)        # [batch_size]
+                predictions.append(samples)
             all_attn_weights = torch.stack(all_attn_weights, dim=1)   # [batch_size, max_length, length_of_encoder_states]
+            predictions = torch.stack(predictions, dim=-1)    # [batch_size, max_length]
             return predictions, all_attn_weights
         else:
             xs = self.embed(ground_truths[:, :-1])   # [batch_size, padded_len_tgt, hidden_size]
-            
-            # Unrolling the forward pass
             outputs = []
-            for time_step in range(-1, xs.shape[1]):
-                if time_step == -1:
-                    h = initial_state                                           # [num_layers, batch_size, hidden_size]
-                else:
-                    h = self.cell(torch.cat([y, xs[:,time_step]], dim=-1), h)   # [num_layers, batch_size, hidden_size]
+            # Unrolling the forward pass
+            for time_step in range(xs.shape[1]):
+                h = self.cell(torch.cat([y, xs[:,time_step]], dim=-1), h)   # [num_layers, batch_size, hidden_size]
                 attns, _ = self.apply_attn(states, states_lengths, h[-1])       # [batch_size, 2 * hidden_size]
                 y = torch.cat([attns, h[-1]], dim=-1)                           # [batch_size, 3 * hidden_size]
                 y = F.relu(self.fc(y))                                          # [batch_size, hidden_size]
                 outputs.append(y)
 
             # Output
-            outputs = torch.stack(outputs[1:], dim=1)   # [batch_size, padded_len_tgt, hidden_size]
+            outputs = torch.stack(outputs, dim=1)   # [batch_size, padded_len_tgt, hidden_size]
             outputs = self.drop(outputs)
-            outputs = self.classifier(outputs)          # [batch_size, padded_len_tgt, n_words]
+            outputs = self.classifier(outputs)      # [batch_size, padded_len_tgt, n_words]
 
             # Compute loss
-            mask = ground_truths[:, 1:].gt(0)           # [batch_size, padded_len_tgt]
+            mask = ground_truths[:, 1:].gt(0)       # [batch_size, padded_len_tgt]
             loss = nn.CrossEntropyLoss()(outputs[mask], ground_truths[:, 1:][mask])
             return loss
 

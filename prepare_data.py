@@ -21,13 +21,16 @@ def read_transcripts(root):
     transcripts = {}
     for l in lines:
         l = l.split()
-        transcripts[l[0]] = ' '.join(l[1:])
+        id = l[0]
+        seq = ''.join(l[1:])
+        seq = ' '.join(list(seq))
+        transcripts[id] = seq
     return transcripts
 
 
 def get_id(audio_file):
     """
-    Given an audio/fbank file path, return its ID.
+    Given an audio file path, return its ID.
     """
     return os.path.basename(audio_file)[:-4]
 
@@ -46,15 +49,17 @@ def process_dataset(root, split):
     audio_files = glob.glob(os.path.join(root, "wav/%s/*/*.wav" % split))
     # Ignore audios without transcript.
     audio_files = [a for a in audio_files if get_id(a) in transcripts]
-
-    transcripts = [transcripts[adata_utils.get_id(a)] for a in audio_files]
+    
+    transcripts = [transcripts[get_id(a)] for a in audio_files]
 
     fname = '%s.csv'%split.upper()
     with open(fname, 'w') as f:
         f.write("audio,transcript\n")
+        count = 0
         for (x, y) in zip(audio_files, transcripts):
             f.write("%s,%s\n" % (x, y))
-    print ("%s is created." % fname)
+            count += 1
+    print ("%s is created. (%d examples)" % (fname, count))
 
 
 def create_tokenizer():

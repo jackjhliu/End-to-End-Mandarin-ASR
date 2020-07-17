@@ -12,7 +12,7 @@ def main():
     args = parser.parse_args()
 
     df = pd.read_csv(args.history)
-    # header: datetime, epoch, learning rate, train loss, dev loss, CER
+    # header: datetime, epoch, learning rate, train loss, dev loss, error rate
 
     plt.figure(figsize=(15,3))
     plt.subplots_adjust(.05, 0.15, .95, .9, None, None)
@@ -25,9 +25,9 @@ def main():
     plt.legend()
 
     plt.subplot(1,3,2)
-    plt.title("Dev CER")
+    plt.title("Dev. error rate")
     plt.grid()
-    plt.plot(df['epoch'], df['CER'])
+    plt.plot(df['epoch'], df['error rate'])
     plt.ylim(0,1)
     plt.xlabel('epochs')
 

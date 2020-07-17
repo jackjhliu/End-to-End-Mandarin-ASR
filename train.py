@@ -28,26 +28,26 @@ def log_history(save_path, message):
     fname = os.path.join(save_path,'history.csv')
     if not os.path.exists(fname):
         with open(fname, 'w') as f:
-            f.write("datetime,epoch,learning rate,train loss,dev loss,CER\n")
+            f.write("datetime,epoch,learning rate,train loss,dev loss,error rate\n")
             f.write("%s\n" % message)
     else:
         with open(fname, 'a') as f:
             f.write("%s\n" % message)
 
 
-def save_checkpoint(filename, save_path, epoch, dev_cer, cfg, weights):
+def save_checkpoint(filename, save_path, epoch, dev_error, cfg, weights):
     """
     Args:
         filename (string): Filename of this checkpoint.
         save_path (string): The location to save.
         epoch (integer): Epoch number.
-        dev_cer (float): CER on development set.
+        dev_error (float): Error rate on development set.
         cfg (dict): Experiment config for reconstruction.
         weights (dict): "state_dict" of this model.
     """
     filename = os.path.join(save_path, filename)
     info = {'epoch': epoch,
-            'dev_cer': dev_cer,
+            'dev_error': dev_error,
             'cfg': cfg,
             'weights': weights}
     torch.save(info, filename)
@@ -96,7 +96,7 @@ def main():
                                                            min_lr=1e-6)
 
     best_epoch = 0
-    best_cer = float('inf')
+    best_error = float('inf')
     for epoch in range(cfg['train']['epochs'] + 1):
         print ("---")
         # Show learning rate
@@ -132,26 +132,26 @@ def main():
                 dev_loss += model(xs.cuda(), xlens, ys.cuda()).item() * (ys[:,1:] > 0).long().sum()
                 n_tokens += (ys[:,1:] > 0).long().sum()
         dev_loss = dev_loss / n_tokens
-        # Compute dev CER
-        cer = eval_utils.get_cer(dev_loader, model)
-        print ("Dev loss: %.3f," % dev_loss, end=' ')
-        print ("dev CER: %.4f" % cer)
-        if cer < best_cer:
-            best_cer = cer
+        # Compute dev error rate
+        error = eval_utils.get_error(dev_loader, model)
+        print ("Dev. loss: %.3f," % dev_loss, end=' ')
+        print ("dev. error rate: %.4f" % error)
+        if error < best_error:
+            best_error = error
             best_epoch = epoch
             # Save best model
-            save_checkpoint("best.pth", save_path, best_epoch, best_cer, cfg, model.state_dict())
-        print ("Best dev CER: %.4f @epoch: %d" % (best_cer, best_epoch))
+            save_checkpoint("best.pth", save_path, best_epoch, best_error, cfg, model.state_dict())
+        print ("Best dev. error rate: %.4f @epoch: %d" % (best_error, best_epoch))
 
-        scheduler.step(cer)
+        scheduler.step(error)
 
         # Save checkpoint
         if not epoch%args.ckpt_freq or epoch==cfg['train']['epochs']:
-            save_checkpoint("checkpoint_%05d.pth"%epoch, save_path, epoch, cer, cfg, model.state_dict())
+            save_checkpoint("checkpoint_%05d.pth"%epoch, save_path, epoch, error, cfg, model.state_dict())
 
         # Logging
         datetime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, cer)
+        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, error)
         log_history(save_path, msg)
 
 
