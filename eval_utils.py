@@ -9,7 +9,6 @@ def get_error(dataloader, model):
     Calculate error rate on a specific dataset.
     """
     tokenizer = torch.load('tokenizer.pth')
-    table = get_phn_mapping_table()
     n_tokens = 0
     total_error = 0
     with torch.no_grad():
