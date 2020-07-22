@@ -164,7 +164,6 @@ class DecoderRNN(nn.Module):
                         states, states_lengths, h[-1])            # [batch_size, 2 * hidden_size], [batch_size, length_of_encoder_states]
                     y = torch.cat([attns, h[-1]], dim=-1)         # [batch_size, 3 * hidden_size]
                     y = F.relu(self.fc(y))                        # [batch_size, hidden_size]
-
                     all_attn_weights.append(attn_weights)
                     # Output
                     logits = self.classifier(y)                   # [batch_size, n_words]
@@ -178,7 +177,7 @@ class DecoderRNN(nn.Module):
                 assert batch_size == 1, ("Only Greedy Search (beam_width=1) supports batch size > 1.")
                 beams = [{'h':h,
                           'y':y,
-                          'preds': [torch.full([1], 3, dtype=torch.int64).cuda()]   # The first predicted word is always <s> (ID=3).
+                          'preds': [torch.full([1], 3, dtype=torch.int64).cuda()],   # The first predicted word is always <s> (ID=3).
                           'attn_weights': [],
                           'scores':[]}]
                 for time_step in range(100):   # Empirically set max_length=100
@@ -189,15 +188,14 @@ class DecoderRNN(nn.Module):
                             beams_update.append(b)
                             continue
                         else:
-                            x = b['preds'][-1]                        # [1]
-                            x = self.embed(x)                         # [1, hidden_size]
+                            x = b['preds'][-1]   # [1]
+                            x = self.embed(x)    # [1, hidden_size]
                             b['h'] = self.cell(torch.cat([b['y'], x], dim=-1), b['h'])   # [num_layers, 1, hidden_size]
                             attns, attn_weights = self.apply_attn(
                                 states, states_lengths, b['h'][-1])       # [1, 2 * hidden_size], [1, length_of_encoder_states]
                             y = torch.cat([attns, b['h'][-1]], dim=-1)    # [1, 3 * hidden_size]
                             y = F.relu(self.fc(y))                        # [1, hidden_size]
                             b['y'] = y
-
                             b['attn_weights'] = b['attn_weights'] + [attn_weights]
                             # Output
                             scores = F.log_softmax(self.classifier(y), dim=-1)           # [1, n_words]

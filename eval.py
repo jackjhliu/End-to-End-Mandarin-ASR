@@ -11,7 +11,7 @@ def main():
     parser.add_argument('ckpt', type=str, help="Checkpoint to restore.")
     parser.add_argument('--split', default='test', type=str, help="Specify which split of data to evaluate.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
-    parser.add_argument('--beams', default=1, type=int, help="Beam Search width.")
+    parser.add_argument('--beams', default=5, type=int, help="Beam Search width.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -21,8 +21,6 @@ def main():
 
     # Restore checkpoint
     info = torch.load(args.ckpt)
-    print ("Dev. error rate of checkpoint: %.4f @epoch: %d" % (info['dev_error'], info['epoch']))
-
     cfg = info['cfg']
 
     # Create dataset

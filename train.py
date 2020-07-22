@@ -36,21 +36,14 @@ def log_history(save_path, message):
             f.write("%s\n" % message)
 
 
-def save_checkpoint(filename, save_path, epoch, dev_error, cfg, weights):
-    """
-    Args:
-        filename (string): Filename of this checkpoint.
-        save_path (string): The location to save.
-        epoch (integer): Epoch number.
-        dev_error (float): Error rate on development set.
-        cfg (dict): Experiment config for reconstruction.
-        weights (dict): "state_dict" of this model.
-    """
+def save_checkpoint(filename, save_path, epoch, dev_error, cfg, model, optimizer, scheduler):
     filename = os.path.join(save_path, filename)
     info = {'epoch': epoch,
             'dev_error': dev_error,
             'cfg': cfg,
-            'weights': weights}
+            'weights': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict()}
     torch.save(info, filename)
 
 
@@ -59,7 +52,6 @@ def main():
     parser.add_argument('cfg', type=str, help="Specify which experiment config file to use.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
     parser.add_argument('--workers', default=0, type=int, help="How many subprocesses to use for data loading.")
-    parser.add_argument('--ckpt_freq', default=10, type=int, help="Frequency (number of epochs) to save checkpoints.")
     parser.add_argument('--restore', type=str, help="Specify a checkpoint to restore weights from.")
     args = parser.parse_args()
 
@@ -78,7 +70,7 @@ def main():
 
     # Create dataset
     train_loader = data.load(split='train', batch_size=cfg['train']['batch_size'], workers=args.workers)
-    dev_loader = data.load(split='dev', batch_size=cfg['train']['batch_size'])
+    dev_loader = data.load(split='dev', batch_size=cfg['train']['batch_size'], workers=args.workers)
 
     # Build model
     tokenizer = torch.load('tokenizer.pth')
@@ -89,13 +81,23 @@ def main():
                                 drop_p=cfg['model']['drop_p'])
     model = model.cuda()
 
+    # Training criteria
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['train']['init_lr'])
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                           mode='min',
+                                                           factor=cfg['train']['decay_factor'],
+                                                           patience=cfg['train']['patience'],
+                                                           min_lr=1e-6)
+
     # Load checkpoints
     if args.restore:
         info = torch.load(args.restore)
+        epoch = info['epoch']
         model.load_state_dict(info['weights'])
-        initial_epoch = info['epoch'] + 1
+        optimizer.load_state_dict(info['optimizer'])
+        scheduler.load_state_dict(info['scheduler'])
     else:
-        initial_epoch = 0
+        epoch = 0
 
     if os.path.exists(os.path.join(save_path, 'best.pth')):
         info = torch.load(os.path.join(save_path, 'best.pth'))
@@ -105,19 +107,14 @@ def main():
         best_epoch = 0
         best_error = float('inf')
 
-    # Training criteria
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['train']['init_lr'])
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                           mode='min',
-                                                           factor=cfg['train']['decay_factor'],
-                                                           patience=cfg['train']['patience'],
-                                                           min_lr=1e-6)
 
-    for epoch in range(initial_epoch, cfg['train']['epochs'] + 1):
+    while (1):
         print ("---")
         # Show learning rate
         lr = get_lr(optimizer)
-        print("Learning rate: %f" % lr)
+        print ("Learning rate: %f" % lr)
+        epoch += 1
+        print ("Epoch: %d" % (epoch))
 
         # Training loop
         model.train()
@@ -135,8 +132,9 @@ def main():
 
             if not step%10:
                 print (time.strftime("%H:%M:%S", time.localtime()), end=' ')
-                print ("epoch: %d, step: %d, loss: %.3f" % (epoch, step, loss.item()))
+                print ("step: %d, loss: %.3f" % (step, loss.item()))
         train_loss = train_loss / n_tokens
+        print ("Train loss: %.3f" % train_loss)
 
         # Validation loop
         model.eval()
@@ -156,14 +154,13 @@ def main():
             best_error = error
             best_epoch = epoch
             # Save best model
-            save_checkpoint("best.pth", save_path, best_epoch, best_error, cfg, model.state_dict())
+            save_checkpoint("best.pth", save_path, best_epoch, best_error, cfg, model, optimizer, scheduler)
         print ("Best dev. error rate: %.4f @epoch: %d" % (best_error, best_epoch))
 
         scheduler.step(error)
 
         # Save checkpoint
-        if not epoch%args.ckpt_freq or epoch==cfg['train']['epochs']:
-            save_checkpoint("checkpoint_%05d.pth"%epoch, save_path, epoch, error, cfg, model.state_dict())
+        save_checkpoint("last.pth", save_path, epoch, error, cfg, model, optimizer, scheduler)
 
         # Logging
         datetime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
