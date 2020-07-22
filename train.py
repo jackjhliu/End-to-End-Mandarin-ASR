@@ -2,6 +2,7 @@
 """
 import yaml
 import os
+import re
 import argparse
 import time
 import torch
@@ -59,6 +60,7 @@ def main():
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
     parser.add_argument('--workers', default=0, type=int, help="How many subprocesses to use for data loading.")
     parser.add_argument('--ckpt_freq', default=10, type=int, help="Frequency (number of epochs) to save checkpoints.")
+    parser.add_argument('--restore', type=str, help="Specify a checkpoint to restore weights from.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -87,6 +89,22 @@ def main():
                                 drop_p=cfg['model']['drop_p'])
     model = model.cuda()
 
+    # Load checkpoints
+    if args.restore:
+        info = torch.load(args.restore)
+        model.load_state_dict(info['weights'])
+        initial_epoch = info['epoch'] + 1
+    else:
+        initial_epoch = 0
+
+    if os.path.exists(os.path.join(save_path, 'best.pth')):
+        info = torch.load(os.path.join(save_path, 'best.pth'))
+        best_epoch = info['epoch']
+        best_error = info['dev_error']
+    else:
+        best_epoch = 0
+        best_error = float('inf')
+
     # Training criteria
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['train']['init_lr'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -95,9 +113,7 @@ def main():
                                                            patience=cfg['train']['patience'],
                                                            min_lr=1e-6)
 
-    best_epoch = 0
-    best_error = float('inf')
-    for epoch in range(cfg['train']['epochs'] + 1):
+    for epoch in range(initial_epoch, cfg['train']['epochs'] + 1):
         print ("---")
         # Show learning rate
         lr = get_lr(optimizer)

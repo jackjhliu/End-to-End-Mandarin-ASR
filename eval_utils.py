@@ -4,7 +4,7 @@ import torch
 import editdistance
 
 
-def get_error(dataloader, model):
+def get_error(dataloader, model, beam_width=1):
     """
     Calculate error rate on a specific dataset.
     """
@@ -13,7 +13,7 @@ def get_error(dataloader, model):
     total_error = 0
     with torch.no_grad():
         for i, (xs, xlens, ys) in enumerate(dataloader):
-            preds_batch, _ = model(xs.cuda(), xlens)   # [batch_size, 100]
+            preds_batch, _ = model(xs.cuda(), xlens, beam_width=beam_width)   # [batch_size, 100]
             for j in range(preds_batch.shape[0]):
                 preds = tokenizer.decode(preds_batch[j])
                 gt = tokenizer.decode(ys[j])

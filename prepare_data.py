@@ -49,7 +49,7 @@ def process_dataset(root, split):
     audio_files = glob.glob(os.path.join(root, "wav/%s/*/*.wav" % split))
     # Ignore audios without transcript.
     audio_files = [a for a in audio_files if get_id(a) in transcripts]
-    
+    # Collect transcripts belonging to this split.
     transcripts = [transcripts[get_id(a)] for a in audio_files]
 
     fname = '%s.csv'%split.upper()
@@ -88,7 +88,7 @@ def main():
     process_dataset(args.root, 'test')
 
     create_tokenizer()
-    print ("Data preparation is complete !")
+    print ("Data preparation is complete!")
 
 
 if __name__ == '__main__':
