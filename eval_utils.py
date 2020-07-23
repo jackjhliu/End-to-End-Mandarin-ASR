@@ -17,8 +17,7 @@ def eval_dataset(dataloader, model, beam_width=1):
     with torch.no_grad():
         eval_tqdm = tqdm(dataloader)
         for (xs, xlens, ys) in eval_tqdm:
-            loss = model(xs.cuda(), xlens, ys.cuda())
-            total_loss.append(loss.item())
+            total_loss.append(model(xs.cuda(), xlens, ys.cuda()).item())
             preds_batch, _ = model(xs.cuda(), xlens, beam_width=beam_width)   # [batch_size, 100]
             for i in range(preds_batch.shape[0]):
                 preds = tokenizer.decode(preds_batch[i])

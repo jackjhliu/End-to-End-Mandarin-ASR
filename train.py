@@ -131,8 +131,7 @@ def main():
             optimizer.step()
 
             train_tqdm.set_description("Training")
-            train_tqdm.set_postfix(loss="%.3f" % (train_loss / n_tokens))
-        train_loss = np.mean(train_loss)
+            train_tqdm.set_postfix(loss="%.3f" % np.mean(train_loss))
 
         # Validation loop
         model.eval()
@@ -153,7 +152,7 @@ def main():
 
         # Logging
         datetime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, dev_error)
+        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, np.mean(train_loss), dev_loss, dev_error)
         log_history(save_path, msg)
 
 
