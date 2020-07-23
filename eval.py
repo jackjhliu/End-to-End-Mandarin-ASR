@@ -41,7 +41,7 @@ def main():
     model = model.cuda()
 
     # Evaluate
-    error = eval_utils.get_error(loader, model, args.beams)
+    _, error = eval_utils.eval_dataset(loader, model, args.beams)
     print ("Error rate on %s set = %.4f" % (args.split, error))
 
 

@@ -7,6 +7,7 @@ import argparse
 import time
 import torch
 import eval_utils
+import numpy as np
 from tqdm import tqdm
 
 
@@ -108,7 +109,6 @@ def main():
         best_epoch = 0
         best_error = float('inf')
 
-
     while (1):
         print ("---")
         epoch += 1
@@ -119,13 +119,11 @@ def main():
 
         # Training loop
         model.train()
-        train_loss = 0
-        n_tokens = 0
+        train_loss = []
         train_tqdm = tqdm(train_loader)
         for (xs, xlens, ys) in train_tqdm:
             loss = model(xs.cuda(), xlens, ys.cuda())
-            train_loss += loss.item() * (ys[:,1:] > 0).long().sum()
-            n_tokens += (ys[:,1:] > 0).long().sum()
+            train_loss.append(loss.item())
 
             optimizer.zero_grad()
             loss.backward()
@@ -134,37 +132,28 @@ def main():
 
             train_tqdm.set_description("Training")
             train_tqdm.set_postfix(loss="%.3f" % (train_loss / n_tokens))
-        train_loss = train_loss / n_tokens
+        train_loss = np.mean(train_loss)
 
         # Validation loop
         model.eval()
-        # Compute dev loss
-        dev_loss = 0
-        n_tokens = 0
-        with torch.no_grad():
-            for (xs, xlens, ys) in dev_loader:
-                dev_loss += model(xs.cuda(), xlens, ys.cuda()).item() * (ys[:,1:] > 0).long().sum()
-                n_tokens += (ys[:,1:] > 0).long().sum()
-        dev_loss = dev_loss / n_tokens
-        # Compute dev error rate
-        error = eval_utils.get_error(dev_loader, model)
+        dev_loss, dev_error = eval_utils.eval_dataset(dev_loader, model)
         print ("Dev. loss: %.3f," % dev_loss, end=' ')
-        print ("dev. error rate: %.4f" % error)
-        if error < best_error:
-            best_error = error
+        print ("dev. error rate: %.4f" % dev_error)
+        if dev_error < best_error:
+            best_error = dev_error
             best_epoch = epoch
             # Save best model
             save_checkpoint("best.pth", save_path, best_epoch, best_error, cfg, model, optimizer, scheduler)
         print ("Best dev. error rate: %.4f @epoch: %d" % (best_error, best_epoch))
 
-        scheduler.step(error)
+        scheduler.step(dev_error)
 
         # Save checkpoint
-        save_checkpoint("last.pth", save_path, epoch, error, cfg, model, optimizer, scheduler)
+        save_checkpoint("last.pth", save_path, epoch, dev_error, cfg, model, optimizer, scheduler)
 
         # Logging
         datetime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, error)
+        msg = "%s,%d,%f,%f,%f,%f" % (datetime, epoch, lr, train_loss, dev_loss, dev_error)
         log_history(save_path, msg)
 
 
