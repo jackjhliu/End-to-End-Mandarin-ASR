@@ -7,6 +7,7 @@ import argparse
 import time
 import torch
 import eval_utils
+from tqdm import tqdm
 
 
 def get_lr(optimizer):
@@ -110,17 +111,18 @@ def main():
 
     while (1):
         print ("---")
+        epoch += 1
+        print ("Epoch: %d" % (epoch))
         # Show learning rate
         lr = get_lr(optimizer)
         print ("Learning rate: %f" % lr)
-        epoch += 1
-        print ("Epoch: %d" % (epoch))
 
         # Training loop
         model.train()
         train_loss = 0
         n_tokens = 0
-        for step, (xs, xlens, ys) in enumerate(train_loader):
+        train_tqdm = tqdm(train_loader)
+        for (xs, xlens, ys) in train_tqdm:
             loss = model(xs.cuda(), xlens, ys.cuda())
             train_loss += loss.item() * (ys[:,1:] > 0).long().sum()
             n_tokens += (ys[:,1:] > 0).long().sum()
@@ -130,11 +132,9 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)   # Gradient clipping
             optimizer.step()
 
-            if not step%10:
-                print (time.strftime("%H:%M:%S", time.localtime()), end=' ')
-                print ("step: %d, loss: %.3f" % (step, loss.item()))
+            train_tqdm.set_description("Training")
+            train_tqdm.set_postfix(loss="%.3f" % (train_loss / n_tokens))
         train_loss = train_loss / n_tokens
-        print ("Train loss: %.3f" % train_loss)
 
         # Validation loop
         model.eval()
