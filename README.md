@@ -53,14 +53,14 @@ $ python show_history.py exp/default/history.csv
 During training, the program will keep monitoring the error rate on development set.
 The checkpoint with the lowest error rate will be saved in the logging directory (by default `exp/default/best.pth`).
 
-To evalutate the checkpoint on test set, run:
+To evalutate the checkpoint on test set (with a beam width of 20), run:
 ```bash
-$ python eval.py exp/default/best.pth
+$ python eval.py exp/default/best.pth --beams 20
 ```
 
 Or you can test random audio from the test set and see the attentions:
 ```bash
-$ python inference.py exp/default/best.pth
+$ python inference.py exp/default/best.pth --beams 20
 
 Predict:
 北 国 将 不 再 生 产 大 压 无 人 机

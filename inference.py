@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import argparse
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
 
 
 def showAttention(predictions, attentions):
@@ -14,7 +15,6 @@ def showAttention(predictions, attentions):
     fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions, cmap='bone')
-    fig.colorbar(cax)
 
     ax.set_yticklabels([''] + output_words)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
