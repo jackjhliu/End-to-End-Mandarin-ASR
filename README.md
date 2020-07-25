@@ -8,7 +8,7 @@ BiGRU encoder + Attention decoder, based on **"Listen, Attend and Spell"**<sup>[
 
 The acoustic features are 80-dimensional filter banks. They are stacked every 3 consecutive frames, so the time resolution is reduced.
 
-With this code you can achieve **~13% CER** on the test set.
+With this code you can achieve **~14% CER** on the test set.
 
 ## Usage
 ### Install requirements
@@ -63,9 +63,9 @@ Or you can test random audio from the test set and see the attentions:
 $ python inference.py exp/default/best.pth --beams 20
 
 Predict:
-北 国 将 不 再 生 产 大 压 无 人 机
+出 庭 梁 长 比 赛 担 任 首 发
 Ground-truth:
-美 国 将 不 再 生 产 大 鸦 无 人 机
+朱 婷 两 场 比 赛 担 任 首 发
 ```
 ![](./img/Figure_3.png)
 
