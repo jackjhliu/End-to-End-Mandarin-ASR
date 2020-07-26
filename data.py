@@ -30,11 +30,23 @@ class ASR(Dataset):
         x, _ = torchaudio.load(x)
         # Compute filter bank features
         x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=80)   # [n_windows, 80]
+        # CMVN
+        x = self.cmvn(x)
         # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/pdf/1712.01769.pdf.
         x = x[:(x.shape[0]//3)*3].view(-1,3*80)   # [n_windows, 80] --> [n_windows//3, 240]
         # Tokenization
         y = self.tokenizer.encode(y)
         return x, y
+
+    def cmvn(self, x):
+        """
+        Cepstral mean and variance normalization.
+        """
+        mean = torch.mean(x, dim=0)   # [80]
+        x = x - mean                  # [n_windows, 80]
+        std = torch.std(x, dim=0)     # [80]
+        x = x / (std + 1e-10)         # [n_windows, 80]
+        return x
 
     def generateBatch(self, batch):
         """
