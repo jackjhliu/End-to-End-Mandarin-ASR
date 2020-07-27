@@ -301,7 +301,7 @@ class Seq2Seq(nn.Module):
                 attention alignment weights for the predictions.
         """
         if ys is None:
-            predictions, attn_weights = self.decoder(self.encoder(xs, xlens))
+            predictions, attn_weights = self.decoder(self.encoder(xs, xlens), beam_width=beam_width)
             return predictions, attn_weights
         else:
             loss = self.decoder(self.encoder(xs, xlens), ys)
