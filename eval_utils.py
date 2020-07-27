@@ -16,6 +16,7 @@ def eval_dataset(dataloader, model, beam_width=1):
     total_error = 0
     with torch.no_grad():
         eval_tqdm = tqdm(dataloader)
+        eval_tqdm.set_description("Evaluating")
         for (xs, xlens, ys) in eval_tqdm:
             total_loss.append(model(xs.cuda(), xlens, ys.cuda()).item())
             preds_batch, _ = model(xs.cuda(), xlens, beam_width=beam_width)   # [batch_size, 100]
@@ -26,7 +27,8 @@ def eval_dataset(dataloader, model, beam_width=1):
                 gt = gt.split()
                 total_error += editdistance.eval(gt, preds)
                 n_tokens += len(gt)
-            eval_tqdm.set_description("Evaluating")
-    loss = np.mean(total_loss)
-    error = total_error / n_tokens
+            # Show message
+            loss = np.mean(total_loss)
+            error = total_error / n_tokens
+            eval_tqdm.set_postfix(loss="%.3f"%loss, error="%.4f"%error)
     return loss, error

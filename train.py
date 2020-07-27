@@ -121,17 +121,16 @@ def main():
         model.train()
         train_loss = []
         train_tqdm = tqdm(train_loader)
+        train_tqdm.set_description("Training")
         for (xs, xlens, ys) in train_tqdm:
             loss = model(xs.cuda(), xlens, ys.cuda())
             train_loss.append(loss.item())
+            train_tqdm.set_postfix(loss="%.3f" % np.mean(train_loss))
 
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)   # Gradient clipping
             optimizer.step()
-
-            train_tqdm.set_description("Training")
-            train_tqdm.set_postfix(loss="%.3f" % np.mean(train_loss))
 
         # Validation loop
         model.eval()
