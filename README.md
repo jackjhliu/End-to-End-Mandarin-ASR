@@ -20,7 +20,7 @@ $ pip install -r requirements.txt
 1. Download AISHELL dataset (data_aishell.tgz) from http://www.openslr.org/33/.
 2. Extract data_aishell.tgz:
 ```bash
-$ python extract_aishell.py ${PATH_TO_data_aishell.tgz}
+$ python extract_aishell.py ${PATH_TO_FILE}
 ```
 3. Create lists (*.csv) of audio file paths along with their transcripts:
 ```bash
