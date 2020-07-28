@@ -89,6 +89,7 @@ def main():
                                                            mode='min',
                                                            factor=cfg['train']['decay_factor'],
                                                            patience=cfg['train']['patience'],
+                                                           threshold=0.01,
                                                            min_lr=1e-6)
 
     # Load checkpoints

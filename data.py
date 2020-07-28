@@ -27,9 +27,9 @@ class ASR(Dataset):
             y (torch.LongTensor, [n_tokens]): The label sequence.
         """
         x, y = self.df.iloc[idx]
-        x, _ = torchaudio.load(x)
+        x, sample_rate = torchaudio.load(x)
         # Compute filter bank features
-        x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=80)   # [n_windows, 80]
+        x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=80, sample_frequency=sample_rate)   # [n_windows, 80]
         # CMVN
         x = self.cmvn(x)
         # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/pdf/1712.01769.pdf.
