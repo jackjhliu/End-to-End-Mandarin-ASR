@@ -54,7 +54,6 @@ def main():
     parser.add_argument('cfg', type=str, help="Specify which experiment config file to use.")
     parser.add_argument('--gpu_id', default=0, type=int, help="CUDA visible GPU ID. Currently only support single GPU.")
     parser.add_argument('--workers', default=0, type=int, help="How many subprocesses to use for data loading.")
-    parser.add_argument('--restore', type=str, help="Specify a checkpoint to restore weights from.")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -92,9 +91,9 @@ def main():
                                                            threshold=0.01,
                                                            min_lr=1e-6)
 
-    # Load checkpoints
-    if args.restore:
-        info = torch.load(args.restore)
+    # Restore checkpoints
+    if os.path.exists(os.path.join(save_path, 'last.pth')):
+        info = torch.load(os.path.join(save_path, 'last.pth'))
         epoch = info['epoch']
         model.load_state_dict(info['weights'])
         optimizer.load_state_dict(info['optimizer'])
