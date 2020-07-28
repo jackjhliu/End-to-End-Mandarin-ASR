@@ -120,8 +120,7 @@ def main():
         # Training loop
         model.train()
         train_loss = []
-        train_tqdm = tqdm(train_loader)
-        train_tqdm.set_description("Training")
+        train_tqdm = tqdm(train_loader, desc="Training")
         for (xs, xlens, ys) in train_tqdm:
             loss = model(xs.cuda(), xlens, ys.cuda())
             train_loss.append(loss.item())
