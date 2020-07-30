@@ -8,7 +8,7 @@ BiGRU encoder + Attention decoder, based on **"Listen, Attend and Spell"**<sup>[
 
 The acoustic features are 80-dimensional filter banks. They are stacked every 3 consecutive frames, so the time resolution is reduced.
 
-With this code you can achieve **~14% CER** on the test set.
+With this code you can achieve **~14% CER** on the test set after 100 epochs.
 
 ## Usage
 ### Install requirements
@@ -53,19 +53,19 @@ $ python show_history.py exp/default/history.csv
 During training, the program will keep monitoring the error rate on development set.
 The checkpoint with the lowest error rate will be saved in the logging directory (by default `exp/default/best.pth`).
 
-To evalutate the checkpoint on test set (with a beam width of 20), run:
+To evalutate the checkpoint on test set (with a beam width of 5), run:
 ```bash
-$ python eval.py exp/default/best.pth --beams 20
+$ python eval.py exp/default/best.pth --beams 5
 ```
 
 Or you can test random audio from the test set and see the attentions:
 ```bash
-$ python inference.py exp/default/best.pth --beams 20
+$ python inference.py exp/default/best.pth --beams 5
 
 Predict:
-出 庭 梁 长 比 赛 担 任 首 发
+才 能 申 请 发 行 成 投 债 券
 Ground-truth:
-朱 婷 两 场 比 赛 担 任 首 发
+才 能 申 请 发 行 城 投 债 券
 ```
 ![](./img/Figure_3.png)
 
