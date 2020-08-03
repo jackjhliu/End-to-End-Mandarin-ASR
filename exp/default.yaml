@@ -18,7 +18,7 @@ train:
 # init_lr: Initial learning rate. Note the solver we use is Adam.
 # decay_factor: Learning rate decay factor.
 # patience: Number of epochs with no improvement after which learning rate will be reduced.
-# augmentation: Apply SpectAugment during training or not.
+# augmentation: Apply SpecAugment during training or not.
     batch_size: 64
     init_lr: 0.0003
     decay_factor : 0.5

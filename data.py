@@ -16,7 +16,7 @@ class ASR(Dataset):
     def __init__(self, split, augmentation):
         """
         Args:
-            augmentation (bool): Apply SpectAugment to training data or not.
+            augmentation (bool): Apply SpecAugment to training data or not.
         """
         self.df = pd.read_csv('%s.csv' % split.upper())
         self.tokenizer = torch.load('tokenizer.pth')
@@ -37,9 +37,9 @@ class ASR(Dataset):
         x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=80, sample_frequency=sample_rate)   # [n_windows, 80]
         # CMVN
         x = self.cmvn(x)
-        # SpectAugment
+        # SpecAugment
         if self.augmentation:
-            x = self.spectaugment(x)
+            x = self.specaugment(x)
         # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/abs/1712.01769.
         x = x[:(x.shape[0]//3)*3].view(-1,3*80)   # [n_windows, 80] --> [n_windows//3, 240]
         # Tokenization
@@ -56,14 +56,14 @@ class ASR(Dataset):
         x = x / (std + 1e-10)         # [n_windows, 80]
         return x
 
-    def spectaugment(self, x, F=15, mF=2, T=70, p=0.2, mT=2):
+    def specaugment(self, x, F=15, mF=2, T=70, p=0.2, mT=2):
         # TODO: Allow user to tune these parameters in config file.
         """
-        SpectAugment (https://arxiv.org/abs/1904.08779). We discard the time warping policy for simplicity.
+        SpecAugment (https://arxiv.org/abs/1904.08779). We discard the time warping policy for simplicity.
 
         Args:
             x (torch.FloatTensor, [seq_length, dim_features]): The FBANK features.
-            F, mF, T, p, mT: The parameters referred in SpectAugment paper.
+            F, mF, T, p, mT: The parameters referred in SpecAugment paper.
         """
         x = x.T   # [n_windows, 80] --> [80, n_windows]
 
@@ -102,7 +102,7 @@ def load(split, batch_size, workers=0, augmentation=False):
         split (string): Which of the subset of data to take. One of 'train', 'dev' or 'test'.
         batch_size (integer): Batch size.
         workers (integer): How many subprocesses to use for data loading.
-        augmentation (bool): Apply SpectAugment to training data or not.
+        augmentation (bool): Apply SpecAugment to training data or not.
 
     Returns:
         loader (DataLoader): A DataLoader can generate batches of (FBANK features, FBANK lengths, label sequence).
