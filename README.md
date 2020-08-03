@@ -10,7 +10,7 @@ The encoder is a bidirectional GRU-RNN with BatchNorm, and the decoder is anothe
 The acoustic features are 80-dimensional filter banks. We apply **SpecAugment**<sup>[4](#References)</sup> to these features to improve generalization.
 They are also stacked every 3 consecutive frames, so the time resolution is reduced.
 
-With this code you can achieve **~14% CER** on the test set after 100 epochs.
+With this code you can achieve **~10% CER** on the test set after 150 epochs.
 
 ## Usage
 ### Install requirements
@@ -65,9 +65,9 @@ Or you can test random audio from the test set and see the attentions:
 $ python inference.py exp/default/best.pth --beams 5
 
 Predict:
-才 能 申 请 发 行 成 投 债 券
+你 电 池 市 场 也 在 向 好
 Ground-truth:
-才 能 申 请 发 行 城 投 债 券
+锂 电 池 市 场 也 在 向 好
 ```
 ![](./img/Figure_3.png)
 
