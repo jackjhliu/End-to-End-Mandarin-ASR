@@ -13,9 +13,14 @@ class ASR(Dataset):
     """
     Stores a Pandas DataFrame in __init__, and reads and preprocesses examples in __getitem__.
     """
-    def __init__(self, split):
+    def __init__(self, split, augmentation):
+        """
+        Args:
+            augmentation (bool): Apply SpectAugment to training data or not.
+        """
         self.df = pd.read_csv('%s.csv' % split.upper())
         self.tokenizer = torch.load('tokenizer.pth')
+        self.augmentation = (augmentation and (split.upper() == 'TRAIN'))
 
     def __len__(self):
         return len(self.df)
@@ -32,7 +37,10 @@ class ASR(Dataset):
         x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=80, sample_frequency=sample_rate)   # [n_windows, 80]
         # CMVN
         x = self.cmvn(x)
-        # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/pdf/1712.01769.pdf.
+        # SpectAugment
+        if self.augmentation:
+            x = self.spectaugment(x)
+        # Stack every 3 frames and down-sample frame rate by 3, following https://arxiv.org/abs/1712.01769.
         x = x[:(x.shape[0]//3)*3].view(-1,3*80)   # [n_windows, 80] --> [n_windows//3, 240]
         # Tokenization
         y = self.tokenizer.encode(y)
@@ -47,6 +55,27 @@ class ASR(Dataset):
         std = torch.std(x, dim=0)     # [80]
         x = x / (std + 1e-10)         # [n_windows, 80]
         return x
+
+    def spectaugment(self, x, F=15, mF=2, T=70, p=0.2, mT=2):
+        # TODO: Allow user to tune these parameters in config file.
+        """
+        SpectAugment (https://arxiv.org/abs/1904.08779). We discard the time warping policy for simplicity.
+
+        Args:
+            x (torch.FloatTensor, [seq_length, dim_features]): The FBANK features.
+            F, mF, T, p, mT: The parameters referred in SpectAugment paper.
+        """
+        x = x.T   # [n_windows, 80] --> [80, n_windows]
+
+        # Freq. masking
+        for _ in range(mF):
+            x = torchaudio.transforms.FrequencyMasking(F)(x)
+
+        # Time masking
+        Tclamp = min(T, int(p * x.shape[1]))
+        for _ in range(mT):
+            x = torchaudio.transforms.TimeMasking(Tclamp)(x)
+        return x.T
 
     def generateBatch(self, batch):
         """
@@ -67,19 +96,20 @@ class ASR(Dataset):
         return xs, xlens, ys
 
 
-def load(split, batch_size, workers=0):
+def load(split, batch_size, workers=0, augmentation=False):
     """
     Args:
         split (string): Which of the subset of data to take. One of 'train', 'dev' or 'test'.
         batch_size (integer): Batch size.
         workers (integer): How many subprocesses to use for data loading.
+        augmentation (bool): Apply SpectAugment to training data or not.
 
     Returns:
         loader (DataLoader): A DataLoader can generate batches of (FBANK features, FBANK lengths, label sequence).
     """
     assert split in ['train', 'dev', 'test']
 
-    dataset = ASR(split)
+    dataset = ASR(split, augmentation)
     print ("%s set size:"%split.upper(), len(dataset))
     loader = DataLoader(dataset,
                         batch_size=batch_size,
@@ -97,7 +127,7 @@ def inspect_data():
     import matplotlib.pyplot as plt
 
     BATCH_SIZE = 64
-    SPLIT = 'dev'
+    SPLIT = 'train'
 
     loader = load(SPLIT, BATCH_SIZE)
     tokenizer = torch.load('tokenizer.pth')

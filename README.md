@@ -2,11 +2,13 @@
 
 中文語音辨識
 
-End-to-end speech recognition on AISHELL dataset using Pytorch.
+End-to-end speech recognition on **AISHELL** dataset using Pytorch.
 
-BiGRU encoder + Attention decoder, based on **"Listen, Attend and Spell"**<sup>[1](#References)</sup>.
+The entire system is an attention-based sequence-to-sequence model<sup>[1](#References)</sup>.
+The encoder is a bidirectional GPU RNN with BatchNorm, and the decoder is another GPU RNN that applies Loung-based attention<sup>[3](#References)</sup>.
 
-The acoustic features are 80-dimensional filter banks. They are stacked every 3 consecutive frames, so the time resolution is reduced.
+The acoustic features are 80-dimensional filter banks. We apply **SpectAugment**<sup>[4](#References)</sup> to these features to improve generalization.
+They are also stacked every 3 consecutive frames, so the time resolution is reduced.
 
 With this code you can achieve **~14% CER** on the test set after 100 epochs.
 
@@ -72,16 +74,20 @@ Ground-truth:
 ## TODO
 - [x] Beam Search
 - [x] Restore checkpoint and resume previous training
+- [x] SpectAugment
 - [ ] LM Rescoring
 - [ ] Label Smoothing
 - [ ] Polyak Averaging
 
 ## References
 [1] W. Chan _et al._, "Listen, Attend and Spell",
-https://arxiv.org/pdf/1508.01211.pdf
+https://arxiv.org/abs/1508.01211
 
 [2] J. Chorowski _et al._, "Attention-Based Models for Speech Recognition",
-https://arxiv.org/pdf/1506.07503.pdf
+https://arxiv.org/abs/1506.07503
 
 [3] M. Luong _et al._, "Effective Approaches to Attention-based Neural Machine Translation",
-https://arxiv.org/pdf/1508.04025.pdf
+https://arxiv.org/abs/1508.04025
+
+[4] D. Park _et al._, "SpecAugment: A Simple Data Augmentation Method for Automatic Speech Recognition",
+https://arxiv.org/abs/1904.08779

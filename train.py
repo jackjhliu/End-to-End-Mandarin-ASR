@@ -70,8 +70,13 @@ def main():
         os.mkdir(save_path)
 
     # Create dataset
-    train_loader = data.load(split='train', batch_size=cfg['train']['batch_size'], workers=args.workers)
-    dev_loader = data.load(split='dev', batch_size=cfg['train']['batch_size'], workers=args.workers)
+    train_loader = data.load(split='train',
+                             batch_size=cfg['train']['batch_size'],
+                             workers=args.workers,
+                             augmentation=cfg['train']['augmentation'])
+    dev_loader = data.load(split='dev',
+                           batch_size=cfg['train']['batch_size'],
+                           workers=args.workers)
 
     # Build model
     tokenizer = torch.load('tokenizer.pth')
@@ -79,7 +84,8 @@ def main():
                                 hidden_size=cfg['model']['hidden_size'],
                                 encoder_layers=cfg['model']['encoder_layers'],
                                 decoder_layers=cfg['model']['decoder_layers'],
-                                drop_p=cfg['model']['drop_p'])
+                                drop_p=cfg['model']['drop_p'],
+                                use_bn=cfg['model']['use_bn'])
     model = model.cuda()
 
     # Training criteria

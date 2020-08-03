@@ -11,23 +11,29 @@ class EncoderRNN(nn.Module):
     """
     A bidirectional RNN. It takes FBANK features and outputs the output state vectors of every time step.
     """
-    def __init__(self, hidden_size, num_layers, drop_p):
+    def __init__(self, hidden_size, num_layers, use_bn):
         """
         Args:
             hidden_size (integer): Size of GRU cells.
             num_layers (integer): Number of GRU layers.
-            drop_p (float): Probability to drop elements at Dropout layers.
+            use_bn (bool): Whether to insert BatchNorm in each layer.
         """
         super(EncoderRNN, self).__init__()
         self.embed = nn.Linear(240, hidden_size)   # 240 is the dimension of acoustic features.
-        self.rnn = nn.GRU(hidden_size,
-                          hidden_size,
-                          batch_first=True,
-                          bidirectional=True,
-                          num_layers=num_layers,
-                          dropout=drop_p)
+        self.rnns = nn.ModuleList([])
+        if use_bn:
+            self.bns = nn.ModuleList([])
+        for i in range(num_layers):
+            if i == 0:
+                insize = hidden_size
+            else:
+                insize = 2 * hidden_size
+            self.rnns.append(nn.GRU(insize, hidden_size, batch_first=True, bidirectional=True))
+            if hasattr(self, 'bns'):
+                self.bns.append(nn.BatchNorm1d(insize))
         # The initial state is a trainable vector.
         self.init_state = torch.nn.Parameter(torch.randn([2 * num_layers, 1, hidden_size]))
+        self.num_layers = num_layers
 
     def forward(self, xs, xlens):
         """
@@ -39,7 +45,7 @@ class EncoderRNN(nn.Module):
             xlens (torch.LongTensor, [batch_size]): Sequence lengths before padding.
 
         Returns:
-            outputs (PackedSequence): The packed output states.
+            xs (PackedSequence): The packed output states.
         """
         batch_size = xs.shape[0]
         xs = self.embed(xs)
@@ -47,8 +53,39 @@ class EncoderRNN(nn.Module):
                                             xlens,
                                             batch_first=True,
                                             enforce_sorted=False)
-        outputs, _ = self.rnn(xs, self.init_state.repeat([1, batch_size, 1]))
-        return outputs
+        inits = self.init_state.repeat([1, batch_size, 1])   # [2 * num_layers, batch_size, hidden_size]
+        for i in range(self.num_layers):
+            if hasattr(self, 'bns'):
+                xs = self.apply_bn(xs, i)
+            xs, _ = self.rnns[i](xs, inits[i*2:(i+1)*2])
+        return xs
+
+    def apply_bn(self, xs, layer_id):
+        """
+        BatchNorm forward pass.
+
+        Args:
+            xs (PackedSequence): Packed input sequence.
+            layer_id (integer): Which layer it is working on.
+
+        Returns:
+            xs (PackedSequence): Packed sequence after applying BatchNorm.
+        """
+        # Unpack
+        xs, xlens = rnn_utils.pad_packed_sequence(
+            xs, batch_first=True)   # [batch_size, padded_seq_length, C], [batch_size]
+        # Ignore zero paddings
+        batch_size = xs.shape[0]
+        xs = [xs[i, :xlens[i]] for i in range(batch_size)]
+        # Concatenate
+        xs = torch.cat(xs, dim=0)     # [total_seq_length, C]
+        # Apply BatchNorm
+        xs = self.bns[layer_id](xs)   # [total_seq_length, C]
+        # Repack
+        xlens = [0] + torch.cumsum(xlens, dim=0).tolist()   # [batch_size + 1]
+        xs = [xs[xlens[i]:xlens[i+1]] for i in range(batch_size)]
+        xs = rnn_utils.pack_sequence(xs, enforce_sorted=False)
+        return xs
 
 
 class MultiLayerGRUCell(nn.Module):
@@ -268,7 +305,7 @@ class Seq2Seq(nn.Module):
     """
     Sequence-to-sequence model at high-level view. It is made up of an EncoderRNN module and a DecoderRNN module.
     """
-    def __init__(self, target_size, hidden_size, encoder_layers, decoder_layers, drop_p=0.):
+    def __init__(self, target_size, hidden_size, encoder_layers, decoder_layers, drop_p=0., use_bn=True):
         """
         Args:
             target_size (integer): Target vocabulary size.
@@ -276,10 +313,11 @@ class Seq2Seq(nn.Module):
             encoder_layers (integer): EncoderRNN layers.
             decoder_layers (integer): DecoderRNN layers.
             drop_p (float): Probability to drop elements at Dropout layers.
+            use_bn (bool): Whether to insert BatchNorm in EncoderRNN.
         """
         super(Seq2Seq, self).__init__()
 
-        self.encoder = EncoderRNN(hidden_size, encoder_layers, drop_p)
+        self.encoder = EncoderRNN(hidden_size, encoder_layers, use_bn)
         self.decoder = DecoderRNN(target_size, hidden_size, decoder_layers, drop_p)
 
     def forward(self, xs, xlens, ys=None, beam_width=1):
