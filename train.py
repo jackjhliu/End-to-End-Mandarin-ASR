@@ -22,7 +22,7 @@ def get_lr(optimizer):
 def log_history(save_path, message):
     """
     A helper function to log the history.
-    The history text file is saved as: {SAVE_PATH}/history.csv
+    The history text file is saved as: ${SAVE_PATH}/history.csv
 
     Args:
         save_path (string): The location to log the history.

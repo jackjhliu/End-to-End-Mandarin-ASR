@@ -5,7 +5,7 @@
 End-to-end speech recognition on **AISHELL** dataset using Pytorch.
 
 The entire system is an attention-based sequence-to-sequence model<sup>[1](#References)</sup>.
-The encoder is a bidirectional GRU net with BatchNorm, and the decoder is another GRU net that applies Loung-based attention<sup>[3](#References)</sup>.
+The encoder is a bidirectional GRU net with BatchNorm, and the decoder is another GRU net that applies Luong-based attention<sup>[3](#References)</sup>.
 
 The acoustic features are 80-dimensional filter banks. We apply **SpecAugment**<sup>[4](#References)</sup> to these features to improve generalization.
 They are also stacked every 3 consecutive frames, so the time resolution is reduced.
