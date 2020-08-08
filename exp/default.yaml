@@ -22,5 +22,5 @@ train:
     batch_size: 64
     init_lr: 0.0003
     decay_factor : 0.5
-    patience: 10
+    patience: 5
     augmentation: true

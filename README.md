@@ -10,7 +10,7 @@ The encoder is a bidirectional GRU net with BatchNorm, and the decoder is anothe
 The acoustic features are 80-dimensional filter banks. We apply **SpecAugment**<sup>[4](#References)</sup> to these features to improve generalization.
 They are also stacked every 3 consecutive frames, so the time resolution is reduced.
 
-With this code you can achieve **~10% CER** on the test set after 150 epochs.
+With this code you can achieve **~10% CER** on the test set after 100 epochs.
 
 ## Usage
 ### Install requirements
