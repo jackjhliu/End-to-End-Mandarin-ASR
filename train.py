@@ -66,6 +66,8 @@ def main():
 
     if not cfg['logdir']:
         save_path = os.path.splitext(args.cfg)[0]
+    else:
+        save_path = cfg['logdir']
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
