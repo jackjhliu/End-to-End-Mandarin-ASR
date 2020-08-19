@@ -164,7 +164,7 @@ class DecoderRNN(nn.Module):
         self.drop = nn.Dropout(drop_p)
         self.classifier = nn.Linear(hidden_size, n_words)
 
-    def forward(self, encoder_states, ground_truths=None, beam_width=1):
+    def forward(self, encoder_states, ground_truths, beam_width, LM, fusion):
         """
         The forwarding behavior depends on if ground-truths are provided.
 
@@ -172,6 +172,8 @@ class DecoderRNN(nn.Module):
             encoder_states (PackedSequence): Packed output state vectors from the EncoderRNN.
             ground_truths (torch.LongTensor, [batch_size, padded_len_tgt]): Padded ground-truths.
             beam_width (integer): Beam Search width. Beam Search is equivalent to Greedy Search when beam_width=1.
+            LM (nn.Module): Language model for shallow fusion.
+            fusion (float): Language model shallow fusion factor.
 
         Returns:
             * When ground-truths are provided, it returns cross-entropy loss. Otherwise it returns predicted word IDs
@@ -188,8 +190,8 @@ class DecoderRNN(nn.Module):
         y = self.init_y.repeat([batch_size, 1])      # [batch_size, hidden_size]
 
         if ground_truths is None:
+            # Greedy Search
             if beam_width == 1:
-                ## Greedy Search
                 all_attn_weights = []
                 predictions = [torch.full([batch_size], 3, dtype=torch.int64).cuda()]   # The first predicted word is always <s> (ID=3).
                 # Unrolling the forward pass
@@ -204,13 +206,20 @@ class DecoderRNN(nn.Module):
                     all_attn_weights.append(attn_weights)
                     # Output
                     logits = self.classifier(y)                   # [batch_size, n_words]
-                    samples = torch.argmax(logits, dim=-1)        # [batch_size]
+                    probs = F.log_softmax(logits, dim=-1)         # [batch_size, n_words]
+                    if LM is not None:
+                        if time_step == 0:
+                            h_lm = None
+                        _, probs_lm, h_lm = LM(predictions[-1].unsqueeze(-1), h_lm) 
+                        probs_lm = probs_lm[:,0]                 # [batch_size, 1, n_words] --> [batch_size, n_words]
+                        probs = probs + fusion * probs_lm        # [batch_size, n_words]
+                    samples = torch.argmax(probs, dim=-1)        # [batch_size]
                     predictions.append(samples)
                 all_attn_weights = torch.stack(all_attn_weights, dim=1)   # [batch_size, max_length, length_of_encoder_states]
                 predictions = torch.stack(predictions, dim=-1)    # [batch_size, max_length]
                 return predictions, all_attn_weights
+            # Beam search
             else:
-                ## Beam search
                 assert batch_size == 1, ("Only Greedy Search (beam_width=1) supports batch size > 1.")
                 beams = [{'h':h,
                           'y':y,
@@ -252,8 +261,8 @@ class DecoderRNN(nn.Module):
                 all_attn_weights = b['attn_weights']                      # list(FloatTensor)
                 all_attn_weights = torch.stack(all_attn_weights, dim=1)   # [1, seq_length, length_of_encoder_states]
                 return predictions, all_attn_weights
+        # Compute loss
         else:
-            ## Compute loss
             xs = self.embed(ground_truths[:, :-1])   # [batch_size, padded_len_tgt, hidden_size]
             outputs = []
             # Unrolling the forward pass
@@ -305,22 +314,22 @@ class Seq2Seq(nn.Module):
     """
     Sequence-to-sequence model at high-level view. It is made up of an EncoderRNN module and a DecoderRNN module.
     """
-    def __init__(self, target_size, hidden_size, encoder_layers, decoder_layers, drop_p=0., use_bn=True):
+    def __init__(self, target_size, hidden_size, encoder_layers, decoder_layers, use_bn, drop_p=0.):
         """
         Args:
             target_size (integer): Target vocabulary size.
             hidden_size (integer): Size of GRU cells.
             encoder_layers (integer): EncoderRNN layers.
             decoder_layers (integer): DecoderRNN layers.
-            drop_p (float): Probability to drop elements at Dropout layers.
             use_bn (bool): Whether to insert BatchNorm in EncoderRNN.
+            drop_p (float): Probability to drop elements at Dropout layers.
         """
         super(Seq2Seq, self).__init__()
 
         self.encoder = EncoderRNN(hidden_size, encoder_layers, use_bn)
         self.decoder = DecoderRNN(target_size, hidden_size, decoder_layers, drop_p)
 
-    def forward(self, xs, xlens, ys=None, beam_width=1):
+    def forward(self, xs, xlens, ys=None, beam_width=1, LM=None, fusion=0.3):
         """
         The forwarding behavior depends on if ground-truths are provided.
 
@@ -329,6 +338,8 @@ class Seq2Seq(nn.Module):
             xlens (torch.LongTensor, [batch_size]): Sequence lengths before padding.
             ys (torch.LongTensor, [batch_size, padded_length_of_target_sentences]): Padded ground-truths.
             beam_width (integer): Beam Search width. Beam Search is equivalent to Greedy Search when beam_width=1.
+            LM (nn.Module): Language model for shallow fusion.
+            fusion (float): Language model shallow fusion factor.
 
         Returns:
             * When ground-truths are provided, it returns cross-entropy loss. Otherwise it returns predicted word IDs
@@ -339,8 +350,65 @@ class Seq2Seq(nn.Module):
                 attention alignment weights for the predictions.
         """
         if ys is None:
-            predictions, attn_weights = self.decoder(self.encoder(xs, xlens), beam_width=beam_width)
+            predictions, attn_weights = self.decoder(self.encoder(xs, xlens),
+                                                     ground_truths=None,
+                                                     beam_width=beam_width,
+                                                     LM=LM,
+                                                     fusion=fusion)
             return predictions, attn_weights
         else:
-            loss = self.decoder(self.encoder(xs, xlens), ys)
+            loss = self.decoder(self.encoder(xs, xlens),
+                                ground_truths=ys,
+                                beam_width=None,
+                                LM=None,
+                                fusion=None)
             return loss
+
+
+class LM(nn.Module):
+    """
+    Language model.
+    """
+    def __init__(self, n_words, hidden_size, num_layers, drop_p=0.):
+        """
+        Args:
+            n_words (integer): Size of the target vocabulary.
+            hidden_size (integer): Size of GRU cells.
+            num_layers (integer): Number of GRU layers.
+            drop_p (float): Probability to drop elements at Dropout layers.
+        """
+        super(LM, self).__init__()
+
+        self.hidden_size = hidden_size
+        self.embed = nn.Embedding(n_words, hidden_size)
+        self.rnn = nn.GRU(hidden_size, hidden_size, num_layers, batch_first=True, dropout=drop_p)
+        self.drop = nn.Dropout(drop_p)
+        self.classifier = nn.Linear(hidden_size, n_words)
+
+    def forward(self, ground_truths, init_h=None):
+        """
+        Args:
+            ground_truths (torch.LongTensor, [batch_size, seq_length]): Padded ground-truths.
+            init_h (torch.FloatTensor, [num_layers, batch_size, hidden_size]): Initial hidden state.
+
+        Returns:
+            loss (float): The cross-entropy loss to maximizing the probability of generating ground-truths.
+            probs (torch.FloatTensor, [batch_size, seq_length, n_words]): Log probability of every time step.
+            h (torch.FloatTensor, [num_layers, batch_size, hidden_size]): Hidden state of the last time step.
+        """
+        if ground_truths.shape[1] == 1:
+            xs = self.embed(ground_truths)            # [batch_size, 1, hidden_size]
+        else:
+            xs = self.embed(ground_truths[:, :-1])    # [batch_size, seq_length, hidden_size]
+
+        xs, h = self.rnn(xs, init_h)              # [batch_size, seq_length, hidden_size], [num_layers, batch_size, hidden_size]
+        xs = self.drop(xs)
+        logits = self.classifier(xs)              # [batch_size, seq_length, n_words]
+        probs = F.log_softmax(logits, dim=-1)     # [batch_size, seq_length, n_words]
+
+        if ground_truths.shape[1] == 1:
+            loss = None        
+        else:
+            mask = ground_truths[:, 1:].gt(0)     # [batch_size, seq_length]
+            loss = nn.CrossEntropyLoss()(logits[mask], ground_truths[:, 1:][mask])
+        return loss, probs, h

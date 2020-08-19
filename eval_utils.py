@@ -6,9 +6,14 @@ import numpy as np
 from tqdm import tqdm
 
 
-def eval_dataset(dataloader, model, beam_width=1):
+def eval_dataset(dataloader, LAS, beam_width=1, LM=None, fusion=0.3):
     """
     Calculate loss and error rate on a dataset.
+
+    Args:
+        LAS (nn.Module): LAS model.
+        LM (nn.Module): Language model for shallow fusion.
+        fusion (float): Language model shallow fusion factor.
     """
     tokenizer = torch.load('tokenizer.pth')
     total_loss = []
@@ -17,8 +22,8 @@ def eval_dataset(dataloader, model, beam_width=1):
     with torch.no_grad():
         eval_tqdm = tqdm(dataloader, desc="Evaluating")
         for (xs, xlens, ys) in eval_tqdm:
-            total_loss.append(model(xs.cuda(), xlens, ys.cuda()).item())
-            preds_batch, _ = model(xs.cuda(), xlens, beam_width=beam_width)   # [batch_size, 100]
+            total_loss.append(LAS(xs.cuda(), xlens, ys.cuda()).item())
+            preds_batch, _ = LAS(xs.cuda(), xlens, beam_width=beam_width, LM=LM, fusion=fusion)
             for i in range(preds_batch.shape[0]):
                 preds = tokenizer.decode(preds_batch[i])
                 gt = tokenizer.decode(ys[i])

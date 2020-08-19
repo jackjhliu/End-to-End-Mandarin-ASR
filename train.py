@@ -66,8 +66,6 @@ def main():
 
     if not cfg['logdir']:
         save_path = os.path.splitext(args.cfg)[0]
-    else:
-        save_path = cfg['logdir']
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
@@ -86,8 +84,8 @@ def main():
                                 hidden_size=cfg['model']['hidden_size'],
                                 encoder_layers=cfg['model']['encoder_layers'],
                                 decoder_layers=cfg['model']['decoder_layers'],
-                                drop_p=cfg['model']['drop_p'],
-                                use_bn=cfg['model']['use_bn'])
+                                use_bn=cfg['model']['use_bn'],
+                                drop_p=cfg['model']['drop_p'])
     model = model.cuda()
 
     # Training criteria
